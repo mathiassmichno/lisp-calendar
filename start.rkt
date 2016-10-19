@@ -3,6 +3,9 @@
 (define cal2 (list "sw7" (list (list "PP" 1 2) (list "CC" 6 7) (list "Pause" 69 1337) (list "Secret Calendar" (list (list "Secret PP" 1 2) (list "Secret CC" 6 7) (list "Secret Pause" 69 1337))) (list "Meme time" 5 2))))
 (define app1 (list "some text" 213123123 1222223))
 
+(define ++ add1)
+(define -- sub1)
+
 (define (extract-title x)
   (cond
     ((appointment? x) (car x))
@@ -45,21 +48,78 @@
     ((list? (cdr cal)) (list (car cal) (cons appointment (extract-content cal))))
     (else (error "FAK"))))
 
-(define (timestamp->civil ts)
-  (let* ((s (modulo ts 86400))
-         (ts (floor (/ ts 86400)))
-         (h (floor (/ s 3600)))
-         (m (modulo (floor (/ s 60)) 60))
-         (s (modulo s 60))
-         (x (+ (floor (/ (+ (* ts 4) 102032) 146097)) 15))
-         (b (- (+ (+ ts 2442113) x) (floor (/ x 4))))
-         (c (floor (/ (- (* b 20) 2442) 7305)))
-         (d (- (- b (* 365 c)) (floor (/ c 4))))
-         (e (floor (/ (* d 1000) 30601)))
-         (f (- (- d (* e 30)) (* e (floor (/ 601 1000))))))
+;;HELPER FUNCTIONS
+(define range (lambda (a [b null] [step 1])
+  (cond
+    [(null? b) (range 0 a step)] 
+    [(>= a b) '()]
+    [else (cons a (range (+ a step) b step))])))
+
+;;TIMESTAMPS
+(define SECS_IN_A_DAY 86400)
+
+(define (second-in-day ts)
+  (modulo ts SECS_IN_A_DAY))
+
+(define (second ts)
+  (modulo (second-in-day ts) 60))
+
+(define (minute ts)
+  (modulo (quotient (second-in-day ts) 60) 60))
+
+(define (hour ts)
+  (modulo (quotient (second-in-day ts) 3600) 24))
+
+(define (day-in-forever ts) ;forever is a timeperiod from january 1st 1970 to the end of all time
+  (quotient ts SECS_IN_A_DAY))
+
+(define (day-in-week ts)
+  (modulo (+ (day-in-forever ts) 3) 7))
+
+(define (name-of-day ts)
+  (list-ref '("Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun") (day-in-week ts)))
+
+(define (days-in-month month year)
+  (let ((month (-- month)))
     (cond
-      ((< e 14) (list (- c 4716) (- e 1) f h m s))
-      (else (list (- c 4715) (- e 13) f h m s)))))
+      [(leap-year? year) (list-ref '(31 29 31 30 31 30 31 31 30 31 30 31) month)]
+      [else (list-ref '(31 28 31 30 31 30 31 31 30 31 30 31) month)])))
+
+(define (month-day-helper day month year)
+  (let ((month-length (days-in-month month year)))
+    (cond
+      [(>= day month-length) (month-day-helper (- day month-length) (++ month) year)]
+      [else (cons day month)])))
+
+(define (day-in-month ts)
+  (car (month-day-helper (day-in-year ts) 1 (year ts))))
+
+(define (month ts)
+  (cdr (month-day-helper (day-in-year ts) 1 (year ts))))
+  
+(define (leap-year? year)
+  (cond
+    [((negate number?) year) (error "Year provided not a number")]
+    [(eq? (modulo year 400) 0) #t]
+    [(eq? (modulo year 100) 0) #f]
+    [(eq? (modulo year 4) 0) #t]
+    [else #f]))
+
+(define (day-year-helper day year)
+  (let ((year-length (if (leap-year? year) 366 365)))
+    (cond
+      [(>= day year-length) (day-year-helper (- day year-length) (++ year))]
+      [else (cons (++ day) year)])))
+
+(define (day-in-year ts)
+  (car (day-year-helper (day-in-forever ts) 1970)))
+
+(define (year ts)
+  (cdr (day-year-helper (day-in-forever ts) 1970)))
+
+
+(define (timestamp->civil-date ts)
+  (format "~A/~A/~A ~A | ~A:~A:~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts) (hour ts) (minute ts) (second ts)))
 
 
 ;(add-appointment cal1 app1)
@@ -78,4 +138,10 @@
 (flatten-calendar cal2)
 cal2
 (current-seconds)
-(timestamp->civil (current-seconds))
+(timestamp->civil-date (current-seconds))
+(timestamp->civil-date 11847456550)
+(map timestamp->civil-date (range (current-seconds) (+ (current-seconds) (* SECS_IN_A_DAY 14)) SECS_IN_A_DAY))
+
+
+
+
