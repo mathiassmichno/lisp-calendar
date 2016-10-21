@@ -20,30 +20,30 @@
 (define ++ add1)
 (define -- sub1)
 
-(define (extract-title x)
+(define (title x)
   (cond
     ((appointment? x) (car x))
     ((calendar? x) (car x))
     (else (error "Cannot get title from non cal or app."))))
 
-(define (extract-content cal)
+(define (content cal)
   (match cal
     [(list name) '()]
     [(list name (list a ...)) a]
     [(? appointment?) (error "Appointment not calendar")]
     [_ (error "Got garbage")]))
 
-(define (extract-appointments cal)
+(define (appointments cal)
   (let* ((content (extract-content cal))
          (cals (filter calendar? content)))
     (append (filter appointment? content) (apply append (map extract-appointments cals)))))
 
-(define (extract-fromtimestamp ap)
+(define (fromtimestamp ap)
   (cond
     [(appointment? ap) (list-ref ap 1)]
     [else error("Not an appointment")]))
 
-(define (extract-totimestamp ap)
+(define (totimestamp ap)
   (cond
     [(appointment? ap) (list-ref ap 2)]
     [else error("Not an appointment")]))
