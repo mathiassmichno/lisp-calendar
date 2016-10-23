@@ -1,5 +1,5 @@
 #lang scheme
-(define cal2 (list "sw7" (list (list "PP" 1 2) (list "CC" 6 7) (list "Pause" 69 1337) (list "Secret Calendar" (list (list "Secret PP" 1 2) (list "Secret CC" 6 7) (list "Secret Pause" 69 1337))) (list "Meme time" 5 2))))
+(define cal2 (list "sw7" (list (list "PP" 22 33) (list "CC" 66 77) (list "Pause" 69 1337) (list "Secret Calendar" (list (list "Secret PP" 11 22) (list "Secret CC" 13 14) (list "Secret Pause" 69 1337))) (list "Meme time" 21 22))))
 (define app1 (list "some text" 213123123 1222223))
 
 (define (calendar title [content null])
@@ -33,10 +33,23 @@
     [(? appointment?) (error "Appointment not calendar")]
     [_ (error "Got garbage")]))
 
+(define (starts-before? a b)
+  (cond
+    [(not (and (appointment? a) (appointment? b))) (error "both arguments needs to be appointments")]
+    [else (< (fromtimestamp a) (fromtimestamp b))]))
+
+;(define (appointments cal)
+ ; (let* ((cont (content cal))
+  ;       (cals (filter calendar? cont)))
+   ; (append (filter appointment? cont) (apply append (map appointments cals)))))
+
 (define (appointments cal)
-  (let* ((content (extract-content cal))
-         (cals (filter calendar? content)))
-    (append (filter appointment? content) (apply append (map extract-appointments cals)))))
+  (let appointments_iter ([cals (list cal)] [app '()])
+    (let* ((cont (apply append (map content cals)))
+           (cals (filter calendar? cont)))
+      (if (empty? cals)
+          (sort (append app cont) starts-before?)
+          (appointments_iter cals (append app (filter appointment? cont)))))))
 
 (define (fromtimestamp ap)
   (cond
@@ -60,27 +73,27 @@
 
 (define (flatten-calendar cal)
   (cond
-    [(calendar? cal) (list (extract-title cal) (extract-appointments cal))]
+    [(calendar? cal) (list (title cal) (appointments cal))]
     [else (error "That is not a calendar")]))
 
 (define (add-appointment cal appointment)
   (cond
     [(null? cal) (error "FAK")]
     [(empty? appointment) (error "FAK")]
-    [(empty? (extract-content cal)) (calendar (extract-title cal) (list appointment))]
-    [(list? (extract-content cal)) (calendar (extract-title cal) (append (extract-content cal) (list appointment)))]
+    [(empty? (content cal)) (calendar (title cal) (list appointment))]
+    [(list? (content cal)) (calendar (title cal) (append (content cal) (list appointment)))]
     [else (error "FAK")]))
 
 (define (add-calendar cal-a cal-b)
   (cond
     [(null? cal-a) (error "FAK")]
     [(empty? appointment) (error "FAK")]
-    [(empty? (extract-content cal-a)) (calendar (extract-title cal-a) (list cal-b))]
-    [(list? (extract-content cal-a)) (calendar (extract-title cal-a) (append (extract-content cal-a) (list cal-b)))]
+    [(empty? (content cal-a)) (calendar (title cal-a) (list cal-b))]
+    [(list? (content cal-a)) (calendar (title cal-a) (append (content cal-a) (list cal-b)))]
     [else (error "FAK")]))
 
 (define (find-appointments cal pred)
-  (filter pred (extract-appointments cal)))
+  (filter pred (appointments cal)))
 
 (define (find-first-helper list pred)
   (let loop ([l list])
@@ -90,17 +103,34 @@
               (if (pred a) a (loop (cdr l))))])))
 
 (define (find-first-appointment cal pred)
-  (find-first-helper (extract-appointments cal) pred))
+  (find-first-helper (appointments cal) pred))
 
 (define (find-last-appointment cal pred)
-  (find-first-helper (reverse (extract-appointments cal)) pred))
+  (find-first-helper (reverse (appointments cal)) pred))
+
+(define (appointments-overlap? ap1 ap2)
+  (cond
+    [(or (<= (totimestamp ap1) (fromtimestamp ap2))
+         (<= (totimestamp ap2) (fromtimestamp ap1))) #f]
+    [else #t]))
+
+(define (calendars-overlap? cal1 cal2)
+  (let* ((aps1 (appointments cal1))
+         (aps2 (appointments cal2)))
+    (ormap (lambda (a)
+             (ormap (lambda (b) (appointments-overlap? a b)) aps2)) aps1)))
   
 ;;HELPER FUNCTIONS
-(define range (lambda (a [b null] [step 1])
+
+
+(define (range a [b null] [step 1])
   (cond
     [(null? b) (range 0 a step)] 
-    [(>= a b) '()]
-    [else (cons a (range (+ a step) b step))])))
+    [else
+     (let range_iter ([f a] [l (list a)])
+       (if (>= (+ f step) b)
+           l
+           (range_iter (+ f step) (append l (list (+ f step))))))]))
 
 ;;TIMESTAMPS
 (define SECS_IN_A_DAY 86400)
@@ -135,7 +165,7 @@
 (define (month-day-helper day month year)
   (let ((month-length (days-in-month month year)))
     (cond
-      [(>= day month-length) (month-day-helper (- day month-length) (++ month) year)]
+      [(> day month-length) (month-day-helper (- day month-length) (++ month) year)]
       [else (cons day month)])))
 
 (define (day-in-month ts)
@@ -166,26 +196,62 @@
 
 
 (define (timestamp->civil-date ts)
-  (format "~A/~A/~A ~A | ~A:~A:~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts) (hour ts) (minute ts) (second ts)))
+  (format "~A/~A/~A ~A ~A:~A:~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts) (hour ts) (minute ts) (second ts)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   TEST   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (present-calendar-html cal from-time to-time)
+  ;MEMES
+  #t)
 
-(define cal1 (calendar "Pepe" (list (appointment "yay" 22 33) (calendar "Lol" (list (appointment "wat" 123 292) (appointment "nay" 456 788))))))
-cal1
-(flatten-calendar cal1)
+(define (agenda cal)
+  (string-join
+   (map
+    (lambda (a)
+      (format "~A from ~A to ~A"
+              (title a)
+              (timestamp->civil-date (fromtimestamp a))
+              (timestamp->civil-date (totimestamp a))))
+    (appointments cal))
+   "</br>"))
+
+(define (html-document title [body-content null])
+  (let ([html_string (format "<!doctype html><title>~A</title>" title)])
+    (if (null? body-content)
+        html_string
+        (string-append html_string (if (string? body-content)
+                                       (format "<body>~A</body>" body-content)
+                                       (format "<body>~s</body>" body-content))))))
+
+(define (write-to-file filename content)
+  (with-output-to-file filename (lambda () (display content))))
+
+(define (days-in-range from-time to-time)
+  (range
+   (+ (- from-time (remainder from-time SECS_IN_A_DAY)) (-- SECS_IN_A_DAY))
+   (if (> to-time SECS_IN_A_DAY)
+       (+ to-time (remainder to-time SECS_IN_A_DAY))
+       SECS_IN_A_DAY)
+   SECS_IN_A_DAY))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   TEST   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-namespace-anchor anc)
+(define ns (namespace-anchor->namespace anc))
+(define test-cal (eval (call-with-input-file "test_calendar" read) ns))
+
+(define cal1 (calendar "Pepe" (list (appointment "yay" 1 11) (calendar "Lol" (list (appointment "wat" 3 4) (appointment "nay" 6 8))))))
 (timestamp->civil-date (current-seconds))
 ;(map timestamp->civil-date (range (current-seconds) (+ (current-seconds) (* SECS_IN_A_DAY 14)) SECS_IN_A_DAY))
 
-(define (fak? x)
-  (match x
-    [(list (? string?) (or (? empty?) (list (or (? string?) (? number?)) ... ))) #t]
-    [_ #f]))
 
 (calendar? cal1)
 (calendar? (add-appointment cal1 (appointment "WOW" 23 24)))
+(calendar? (add-calendar cal1 (calendar "WOW" (list (appointment "meme" 4 20) (appointment "dank" 1 2)))))
+(define da-cal (add-calendar cal1 (calendar "WOW" (list (appointment "meme" 4 20) (appointment "dank" 1 2))))) 
 (appointment? (appointment "yayaayayayay" 22 55))
 (add-appointment cal1 (appointment "WOW" 23 24))
 
-(find-first-appointment cal1 (lambda (a) (if (> (extract-fromtimestamp a) 20) #t #f)))
-(find-last-appointment cal1 (lambda (a) (if (> (extract-fromtimestamp a) 20) #t #f)))
+(find-first-appointment cal1 (lambda (a) (if (> (fromtimestamp a) 2) #t #f)))
+(find-last-appointment cal1 (lambda (a) (if (> (fromtimestamp a) 20) #t #f)))
+
+(calendars-overlap? cal1 cal2)
+(write-to-file "test.html" (html-document (title test-cal) (agenda test-cal)))
