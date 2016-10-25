@@ -38,10 +38,10 @@
     [(not (and (appointment? a) (appointment? b))) (error "both arguments needs to be appointments")]
     [else (< (fromtimestamp a) (fromtimestamp b))]))
 
-;(define (appointments cal)
- ; (let* ((cont (content cal))
-  ;       (cals (filter calendar? cont)))
-   ; (append (filter appointment? cont) (apply append (map appointments cals)))))
+(define (ends-after? a b)
+  (cond
+    [(not (and (appointment? a) (appointment? b))) (error "both arguments needs to be appointments")]
+    [else (> (totimestamp a) (totimestamp b))]))
 
 (define (appointments cal)
   (let appointments_iter ([cals (list cal)] [app '()])
@@ -132,6 +132,33 @@
            l
            (range_iter (+ f step) (append l (list (+ f step))))))]))
 
+
+(define (days-in-range from-time to-time)
+  (range
+   (+ (- from-time (remainder from-time SECS_IN_A_DAY)) (-- SECS_IN_A_DAY))
+   (if (> to-time SECS_IN_A_DAY)
+       (-- (+ to-time (remainder to-time SECS_IN_A_DAY)))
+       (-- SECS_IN_A_DAY))
+   SECS_IN_A_DAY))
+
+
+(define (start-and-end-of-month ts)
+  (let* ([d (day-in-month ts)]
+         [month-length (days-in-month (month ts) (year ts))]
+         [month-start (if (= d 1)
+                          ts
+                          (- ts (* (-- d) SECS_IN_A_DAY)))]
+         [month-end   (if (= d month-length)
+                          ts
+                          (+ ts (-- (* (- month-length (-- d)) SECS_IN_A_DAY))))])
+    (list month-start month-end)))
+
+
+(define (range-in-month ts)
+  (match (start-and-end-of-month ts)
+    [(list start end) (days-in-range start end)]))
+
+
 ;;TIMESTAMPS
 (define SECS_IN_A_DAY 86400)
 
@@ -196,23 +223,35 @@
 
 
 (define (timestamp->civil-date ts)
-  (format "~A/~A/~A ~A ~A:~A:~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts) (hour ts) (minute ts) (second ts)))
+  (format "~A/~A/~A ~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts)))
+
+(define (timestamp->civil-time ts)
+  (format "~A:~A:~A" (hour ts) (minute ts) (second ts)))
 
 
 (define (present-calendar-html cal from-time to-time)
-  ;MEMES
-  #t)
+  (let ((c (calendar (title cal) (filter (lambda (x)
+                                           (appointments-overlap? x (appointment "fake" from-time to-time)))
+                                         (appointments cal)))))
+  (write-to-file "calendar.html" (html-document (title cal) (agenda c)))))
 
 (define (agenda cal)
-  (string-join
-   (map
-    (lambda (a)
-      (format "~A from ~A to ~A"
-              (title a)
-              (timestamp->civil-date (fromtimestamp a))
-              (timestamp->civil-date (totimestamp a))))
-    (appointments cal))
-   "</br>"))
+  (let* ([aps (appointments cal)]
+         [cal-start (fromtimestamp (first aps))]
+         [cal-end (totimestamp (first (sort aps ends-after?)))])
+    (map
+     (lambda (last-sec-in-day)
+       (format "<h4>~A</h4><ul>~A</ul>"
+               (timestamp->civil-date last-sec-in-day)
+               (string-append*
+                (map
+                 (lambda (a)
+                   (format "<li>~A from ~A to ~A</li>"
+                           (title a)
+                           (timestamp->civil-time (fromtimestamp a))
+                           (timestamp->civil-time (totimestamp a))))
+                 (find-appointments cal (lambda (ap) (appointments-overlap? ap (appointment "pseudo" (- last-sec-in-day (-- SECS_IN_A_DAY)) last-sec-in-day))))))))
+     (days-in-range cal-start cal-end))))
 
 (define (html-document title [body-content null])
   (let ([html_string (format "<!doctype html><title>~A</title>" title)])
@@ -220,18 +259,12 @@
         html_string
         (string-append html_string (if (string? body-content)
                                        (format "<body>~A</body>" body-content)
-                                       (format "<body>~s</body>" body-content))))))
+                                       (format "<body>~A</body>" (string-append* body-content)))))))
 
 (define (write-to-file filename content)
   (with-output-to-file filename (lambda () (display content))))
 
-(define (days-in-range from-time to-time)
-  (range
-   (+ (- from-time (remainder from-time SECS_IN_A_DAY)) (-- SECS_IN_A_DAY))
-   (if (> to-time SECS_IN_A_DAY)
-       (+ to-time (remainder to-time SECS_IN_A_DAY))
-       SECS_IN_A_DAY)
-   SECS_IN_A_DAY))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   TEST   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-namespace-anchor anc)
@@ -254,4 +287,11 @@
 (find-last-appointment cal1 (lambda (a) (if (> (fromtimestamp a) 20) #t #f)))
 
 (calendars-overlap? cal1 cal2)
+;(present-calendar-html test-cal 0 (current-seconds))
 (write-to-file "test.html" (html-document (title test-cal) (agenda test-cal)))
+(define oct-a (range-in-month (current-seconds)))
+(define oct-b (range-in-month 1477958399))
+(timestamp->civil-date (list-ref oct-a 0))
+(timestamp->civil-date (list-ref oct-b 0))
+(timestamp->civil-date (last oct-a))
+(timestamp->civil-date (last oct-b))
