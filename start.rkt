@@ -128,7 +128,7 @@
     [(null? b) (range 0 a step)] 
     [else
      (let range_iter ([f a] [l (list a)])
-       (if (>= (+ f step) b)
+       (if (> (+ f step) b)
            l
            (range_iter (+ f step) (append l (list (+ f step))))))]))
 
@@ -137,7 +137,7 @@
   (range
    (+ (- from-time (remainder from-time SECS_IN_A_DAY)) (-- SECS_IN_A_DAY))
    (if (> to-time SECS_IN_A_DAY)
-       (-- (+ to-time (remainder to-time SECS_IN_A_DAY)))
+       (-- (+ to-time (- SECS_IN_A_DAY (remainder to-time SECS_IN_A_DAY))))
        (-- SECS_IN_A_DAY))
    SECS_IN_A_DAY))
 
@@ -150,7 +150,7 @@
                           (- ts (* (-- d) SECS_IN_A_DAY)))]
          [month-end   (if (= d month-length)
                           ts
-                          (+ ts (-- (* (- month-length (-- d)) SECS_IN_A_DAY))))])
+                          (+ ts (* (- month-length d) SECS_IN_A_DAY)))])
     (list month-start month-end)))
 
 
@@ -158,6 +158,15 @@
   (match (start-and-end-of-month ts)
     [(list start end) (days-in-range start end)]))
 
+(define (pseudo-appointment end-time)
+  (appointment "pseudo" (- end-time (-- SECS_IN_A_DAY)) end-time))
+
+(define (leftpad-string str width char)
+  (format "~A~A"
+          (make-string
+           (- width (string-length str))
+           char)
+          str))
 
 ;;TIMESTAMPS
 (define SECS_IN_A_DAY 86400)
@@ -225,10 +234,41 @@
 (define (timestamp->civil-date ts)
   (format "~A/~A/~A ~A" (year ts) (month ts) (day-in-month ts) (name-of-day ts)))
 
+(define (pad-time t)
+  (leftpad-string (number->string t) 2 #\0))
+
 (define (timestamp->civil-time ts)
-  (format "~A:~A:~A" (hour ts) (minute ts) (second ts)))
+  (string-join
+   (map pad-time
+        (list (hour ts) (minute ts) (second ts)))
+   ":"))
 
+(define (timestamp->civil ts)
+  (string-append
+   (timestamp->civil-date ts)
+   " "
+   (timestamp->civil-time ts)))
 
+(define (timestring-relative-to-day appointment last-sec-in-day)
+  (let ([pa (pseudo-appointment last-sec-in-day)])
+    (cond
+      [(and
+        (< (fromtimestamp appointment) (fromtimestamp pa))
+        (> (totimestamp appointment) (totimestamp pa))) "continued (all day)"]
+      [(< (fromtimestamp appointment) (fromtimestamp pa))
+       (string-append
+        "continued, ends at "
+        (timestamp->civil-time (totimestamp appointment)))]
+      [(> (totimestamp appointment) (totimestamp pa))
+       (string-append
+        (timestamp->civil-time (fromtimestamp appointment))
+        " continues to next day")]
+      [else (format
+             "from ~A to ~A"     
+             (timestamp->civil-time (fromtimestamp appointment))
+             (timestamp->civil-time (totimestamp appointment)))])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; HTML ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (present-calendar-html cal from-time to-time)
   (let ((c (calendar (title cal) (filter (lambda (x)
                                            (appointments-overlap? x (appointment "fake" from-time to-time)))
@@ -239,30 +279,37 @@
   (let* ([aps (appointments cal)]
          [cal-start (fromtimestamp (first aps))]
          [cal-end (totimestamp (first (sort aps ends-after?)))])
-    (map
-     (lambda (last-sec-in-day)
-       (format "<h4>~A</h4><ul>~A</ul>"
-               (timestamp->civil-date last-sec-in-day)
-               (string-append*
-                (map
-                 (lambda (a)
-                   (format "<li>~A from ~A to ~A</li>"
-                           (title a)
-                           (timestamp->civil-time (fromtimestamp a))
-                           (timestamp->civil-time (totimestamp a))))
-                 (find-appointments cal (lambda (ap) (appointments-overlap? ap (appointment "pseudo" (- last-sec-in-day (-- SECS_IN_A_DAY)) last-sec-in-day))))))))
-     (days-in-range cal-start cal-end))))
+    (format
+     "<h1><marquee>~A</marquee></h1>~n~A"
+     (title cal)
+     (string-join
+      (filter (lambda (s) (string-contains? s "<li>"))
+              (map
+               (lambda (last-sec-in-day)
+                 (format "<h4>~A</h4>~n<ul>~n~A</ul>"
+                         (timestamp->civil-date last-sec-in-day)
+                         (string-append*
+                          (map
+                           (lambda (a)
+                             (format "<li><strong>~A</strong> ~A</li>~n"
+                                     (title a)
+                                     (timestring-relative-to-day a last-sec-in-day)))
+                           (find-appointments cal
+                                              (lambda (ap)
+                                                (appointments-overlap? ap (pseudo-appointment last-sec-in-day))))))))
+               (days-in-range cal-start cal-end)))
+      "\n"))))
 
 (define (html-document title [body-content null])
-  (let ([html_string (format "<!doctype html><title>~A</title>" title)])
+  (let ([html_string (format "<!doctype html>~n<title>~A</title>~n" title)])
     (if (null? body-content)
         html_string
         (string-append html_string (if (string? body-content)
-                                       (format "<body>~A</body>" body-content)
-                                       (format "<body>~A</body>" (string-append* body-content)))))))
+                                       (format "<body>~n~A~n</body>" body-content)
+                                       (format "<body>~n~A~n</body>" (string-append* body-content)))))))
 
 (define (write-to-file filename content)
-  (with-output-to-file filename (lambda () (display content))))
+  (with-output-to-file filename (lambda () (display content)) #:exists 'replace))
 
 
 
@@ -287,7 +334,7 @@
 (find-last-appointment cal1 (lambda (a) (if (> (fromtimestamp a) 20) #t #f)))
 
 (calendars-overlap? cal1 cal2)
-;(present-calendar-html test-cal 0 (current-seconds))
+(present-calendar-html test-cal 1477556100 1477643700)
 (write-to-file "test.html" (html-document (title test-cal) (agenda test-cal)))
 (define oct-a (range-in-month (current-seconds)))
 (define oct-b (range-in-month 1477958399))
@@ -295,3 +342,30 @@
 (timestamp->civil-date (list-ref oct-b 0))
 (timestamp->civil-date (last oct-a))
 (timestamp->civil-date (last oct-b))
+
+"TESTING RANGE IN MONTH FUNC"
+(define test-range (range 1475280000 1477958399 1337))
+(define oct-days (days-in-range 1475280666 1477957666))
+(define oct-ulti (map (lambda (x) (list x (range-in-month x))) test-range))
+(map (lambda(a)
+   (format "~A  ~A ~A  ~A  ~A"
+           (timestamp->civil (first a))
+           (days-in-month (month (first a)) (year (first a)))
+           (length (last a))
+           (map timestamp->civil (start-and-end-of-month (first a)))
+           (map timestamp->civil (list (first (last a)) (last (last a)))))) (filter (lambda (x) (= 1477871999 (last (last x)))) oct-ulti))
+
+"TESTING START AND END OF MONTH FUNC"
+(define wat-ulti (map (lambda (x) (list x (start-and-end-of-month x))) (range 1475280000 1477958399 (* 30 60))))
+(map
+ (lambda(a)
+   (format "~A    ~A"
+           (timestamp->civil (first a))
+           (map timestamp->civil (last a))))
+ (filter
+  (lambda (x)
+    (let ((x (last x)))
+      (not
+       (and (and (>= (first x) 1475280000) (<= (first x) 1475366399))
+            (and (>= (last x) 1477872000) (<= (last x) 1477958399))))))
+  wat-ulti))
