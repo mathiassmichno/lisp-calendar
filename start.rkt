@@ -98,6 +98,18 @@
             [(empty? (content c)) (calendar (title c) (list a))]
             [(list? (content c)) (calendar (title c) (append (content c) (list a)))]))))))
 
+(define (remove-appointments cal pred)
+  (with-calendar cal
+    (lambda (cal)
+      (let sub-cal-loop ([c cal])
+        (let ([aps (filter appointment? (content c))]
+              [cls (filter calendar? (content c))])
+          (calendar
+           (title c)
+           (append
+            (filter (negate pred) aps)
+            (map sub-cal-loop cls))))))))
+
 (define (add-calendar cal-a cal-b)
   (with-calendar cal-a
     (lambda (cal-a)
@@ -108,48 +120,57 @@
 (define (find-appointments cal pred)
   (filter pred (appointments cal)))
 
-(define (find-first-helper list pred)
-  (let loop ([l list])
-    (cond
-      [(null? l) #f]
-      [else (let ([a (car l)])
-              (if (pred a) a (loop (cdr l))))])))
+(define (find-first-helper list pred)  
+  (if (null? list)
+      #f
+      (let ([a (car list)])
+        (if (pred a)
+            a
+            (find-first-helper (cdr list) pred)))))
 
 (define (find-first-appointment cal pred)
-  (find-first-helper (appointments cal) pred))
+  (with-calendar cal
+    (lambda (cal)
+      (find-first-helper (appointments cal) pred))))
 
 (define (find-last-appointment cal pred)
-  (find-first-helper (reverse (appointments cal)) pred))
+  (with-calendar cal
+    (lambda (cal)
+      (find-first-helper (reverse (appointments cal)) pred))))
 
 (define (appointments-overlap? ap1 ap2)
-  (and (< (fromtimestamp ap1) (totimestamp ap2))
-       (< (fromtimestamp ap2) (totimestamp ap1))))
+  (with-appointment ap1
+    (lambda (ap1)
+      (with-appointment ap2
+        (lambda (ap2)
+          (and (< (fromtimestamp ap1) (totimestamp ap2))
+               (< (fromtimestamp ap2) (totimestamp ap1))))))))
 
 (define (calendars-overlap? cal1 cal2)
-  (let* ((aps1 (appointments cal1))
-         (aps2 (appointments cal2)))
-    (ormap (lambda (a)
-             (ormap (lambda (b) (appointments-overlap? a b)) aps2)) aps1)))
+  (with-calendar cal1
+    (lambda (cal1)
+      (with-calendar cal2
+        (lambda (cal2)
+          (let* ((aps1 (appointments cal1))
+                 (aps2 (appointments cal2)))
+            (ormap (lambda (a)
+                     (ormap (lambda (b) (appointments-overlap? a b)) aps2)) aps1)))))))
   
 ;;HELPER FUNCTIONS
 
-
 (define (range a [b null] [step 1])
-  (cond
-    [(null? b) (range 0 a step)] 
-    [else
-     (let range_iter ([f a] [l (list a)])
-       (if (> (+ f step) b)
-           l
-           (range_iter (+ f step) (append l (list (+ f step))))))]))
+  (if (null? b)
+      (range 0 a step)
+      (let range_iter ([f a] [res-list (list a)])
+        (if (> (+ f step) b)
+            res-list
+            (range_iter (+ f step) (append res-list (list (+ f step))))))))
 
 
 (define (days-in-range from-time to-time)
   (range
    (+ (- from-time (remainder from-time SECS_IN_A_DAY)) (-- SECS_IN_A_DAY))
-   (if (> to-time SECS_IN_A_DAY)
-       (-- (+ to-time (- SECS_IN_A_DAY (remainder to-time SECS_IN_A_DAY))))
-       (-- SECS_IN_A_DAY))
+   (-- (+ to-time (- SECS_IN_A_DAY (remainder to-time SECS_IN_A_DAY))))
    SECS_IN_A_DAY))
 
 
@@ -263,9 +284,9 @@
 (define (timestring-relative-to-day appointment last-sec-in-day)
   (let ([pa (pseudo-appointment last-sec-in-day)])
     (cond
-      [(and
-        (< (fromtimestamp appointment) (fromtimestamp pa))
-        (> (totimestamp appointment) (totimestamp pa))) "continued (all day)"]
+      [(and (< (fromtimestamp appointment) (fromtimestamp pa))
+            (> (totimestamp appointment) (totimestamp pa)))
+       "continued (all day)"]
       [(< (fromtimestamp appointment) (fromtimestamp pa))
        (string-append
         "continued, ends at "
@@ -383,3 +404,5 @@
   wat-ulti))
 
 (calendar? (add-calendar cal1 (calendar "meem")))
+
+(remove-appointments (add-calendar test-cal cal1) (lambda (a) (string-contains? (title a) "ay")))
