@@ -1,15 +1,15 @@
-(calendar "sw7" 
+(calendar "sw7 is the best but maybe not"
 	(list
-		(appointment "PP" 1477296900 1477310400) 
-		(appointment "CC" 1477312200 1477326600) 
-		(appointment "Pause" 1477310400 1477312200) 
-		(calendar "Secret Calendar" 
-			(list 
-				(appointment "Secret PP" 1477556100 1477627980) 
-				(appointment "Secret CC" 1477643400 1477643700) 
+		(appointment "PP" 1477296900 1477310400)
+		(appointment "CC" 1477312200 1477326600)
+		(appointment "Pause" 1477310400 1477312200)
+		(calendar "Secret Calendar"
+			(list
+				(appointment "Secret PP" 1477556100 1477627980)
+				(appointment "Secret CC" 1477643400 1477643700)
 				(appointment "Secret Pause" 1477643700 1477707720)
 			)
-		) 
+		)
 		(appointment "Meme time" 1477402620 1477418340)
 	)
 )
