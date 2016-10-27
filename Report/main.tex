@@ -1,0 +1,58 @@
+% deliverable
+%
+% Licensed under MIT License
+%
+% Page creation engine
+\documentclass[12pt,a4paper,article,oneside]{memoir}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{titling}
+\usepackage[pagestyles]{titlesec}
+\titleformat{\chapter}[hang]{\huge\bfseries}{}{0pt}{}[
+    \vspace{-0.5ex}%
+    \rule{\textwidth}{0.5pt}%
+    \vspace{-1.5cm}
+]
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsection}{\thesection.\Roman{subsection}}
+
+\pretitle{\vspace{-1cm}\centering\HUGE\bfseries\scshape}
+\posttitle{\\
+\vspace{-20pt}
+\rule{10em}{0.5pt}\\
+\vspace{20pt}}
+\preauthor{\centering\large}
+\postauthor{\\\vspace{18pt}}
+\predate{\centering\large}
+\postdate{\\}
+
+\setulmarginsandblock{3cm}{3cm}{*}
+\setlrmarginsandblock{3cm}{3cm}{*}
+\checkandfixthelayout%
+
+% Meta-data
+\title{PP Mini Project I}
+\author{Mathias Sass Michno\\\footnotesize\texttt{\# 20130250 | <mmichn13@student.aau.dk>}}
+\date{October 28, 2016}
+
+% Main modules
+\usepackage{url}      % URL
+\usepackage{hyperref} % Links
+\usepackage{moreverb} % Encoding
+\usepackage{csquotes}
+
+% Document
+\begin{document}
+\maketitle
+
+% Chapter files listing
+\input{src/1/main.tex}
+\input{src/2/main.tex}
+\input{src/3/main.tex}
+\input{src/4/main.tex}
+% End of chapter files listing
+
+\end{document}
