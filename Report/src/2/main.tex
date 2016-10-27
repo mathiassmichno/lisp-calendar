@@ -1,3 +1,51 @@
 \chapter{Overview}
+Firstly some assumptions about the assignment will be presented, followed by a presentation of the calendar and appointment structures.
+Lastly some shortcomings of the program will be described.
 
-Write Overview here.
+Moreover the source code in the \texttt{lisp\_calendar.rkt} file has been commented such that every function is described.
+
+\section{Assumptions}
+This calendar Lisp language makes some assumptions regarding the assignment:
+\begin{itemize}
+    \item A calendar does not require content, i.e.~appointment or calendars, to be valid.\\
+        However, in the internal representation a calendar with no content simply contains an empty list.
+    \item Functionality such as: \texttt{find-appointments}, \texttt{find-first-appointment}, and\\
+        \texttt{find-last-appointment}, will find appointments in a calendar and any of said calendar's sub--calendars, and so forth.
+    \item The time--format of appointments is defined as Unix timestamps, i.e. the number of seconds since January 1st 1970 at 00:00:00 GMT, not counting leap seconds\\
+        This means that local time and date is not considered, and neither are dates before January 1st 1970.
+    \item Furthermore while the presentation of the calendar will contain ``civil'' time and date, i.e. regular formatted dates and times,
+        all appointments will be made using the raw Unix timestamps.
+    \item Functionality which removes appointments or calendars from a calendar,\\
+        i.e.~\texttt{remove-from-calendar}, \texttt{remove-appointments}, and \texttt{remove-calendars} must retain the structure of the input calendar.\\
+        This means that the input calendar must not be flattened in any way shape or form.
+    \item However, when adding or removing from a calendar, the order of the content is not guaranteed to be the same as in the source.
+\end{itemize}
+
+\section{Structure of Calendars and Appointments}
+The internal representation of both a \textbf{calendar} and an \textbf{appointment} is based on a simple list structure.
+
+\medskip
+An appointment is defined as: \textit{A list containing exactly three elements in the following order; a string representing the title, a positive integer representing the starting time in Unix time, and another integer representing the ending time in Unix time. Moreover the starting time must be smaller than the ending time.}
+If this is satisfied the list is a valid appointment, and will be matched be the \texttt{appointment?} predicate.
+
+\medskip
+A calendar is defined as: \textit{A list containing exactly two elements in the following order; a string representing the title, and a list representing the content of the calendar. Furthermore the list of content must only contain valid appointments or other valid calendars.}
+A list satisfying this will be matched by the \texttt{calendar?} predicate as a valid calendar.
+
+\medskip
+Both appointments and calendars can be created using the \texttt{appointment} and \texttt{calendar} function respectively.
+These function are guaranteed to evaluate to valid, well--formed structures.
+
+\section{Shortcomings}
+Because of to the choice of using Unix timestamps to represent date and time, a rather large portion of the program is an implementation of functions to transform Unix timestamps to human readable date--time strings.
+
+Due to the time restriction of three days, I choose to focus on other functionalities as well as general polish, instead of implementing the reverse transformation.
+That being said, a significant portion of the existing functions could be leveraged in such an implementation.
+
+\medskip
+Another weakness of the program is, the inability to present something else than an agenda in html.
+Ideally a week-- or month--calendar would be implemented, and therefore some functions I thought would be useful
+are present in the source code; such as \texttt{range-in-month}.
+
+
+
