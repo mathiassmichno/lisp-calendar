@@ -1,7 +1,7 @@
 {
-  "name": "deliverable_radu",
-  "description": "Deliverable Rado",
-  "version": "0.0.1",
+  "name": "Report",
+  "description": "PP Mini Project Lisp Report",
+  "version": "9.1.1",
   "private": true,
   "devDependencies": {
     "grunt": "^0.4.2",
