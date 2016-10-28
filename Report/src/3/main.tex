@@ -1,7 +1,82 @@
 \chapter{Reflections}
-Bush did 9/11
-\begin{itemize}
-    \item You are expected to reflect on your use of functional programming relative to your previous experience with imperative and object-oriented programming.
-    \item You are expected to evaluate strengths and weaknesses of the functional paradigm in relation to the requested solution/program in the miniproject.
-    \item In addition, you are expected to reflect on your use of dynamic typing in contrast to your experience with programming languages with static typing.
-\end{itemize}
+In this chapter, I will reflect upon different aspects of the functional paradigm.
+
+At the time of writing I have completed the Lisp calendar language mini project,
+and because of this the reflections will be heavily influenced by the mini project assignment.
+\section{Functional Programming --- A New Experience}
+During development of my Lisp calendar language, I worked in a ``pure'' functional paradigm for the first time.
+Usually multi--paradigm languages with imperative and object--oriented point of views, such as Python, Java or C\#,
+are my first choice when starting a new software project;
+but my newfound experiences with functional programming through Scheme,
+only confirms the idea that the chosen paradigm should be based on the notion of \textit{the right tool for the job}.
+This means that certain problems are more easily solved in the functional paradigm, whereas other problems benefit from e.g. OOP.
+
+\medskip
+As I came from a background heavily influenced by imperative programming, the notion of \textbf{side--effects} used to play a big role in my software.
+One could say that the software I used to write (or usually write) is dependent upon \textbf{state},
+so when I had to program in the functional paradigm, it was hard at first to put the use of state behind me.
+However after programming the first few functions I quickly became accustomed to the \textbf{stateless} nature of FP,
+and what at first was a hindering, quickly felt like an advantage.
+
+\medskip
+Also \textbf{stateless} programming encourages the use and implementation of \textbf{pure functions},
+since it is the only way to program without state.
+However more and more programming outside FP, tends to implement pure functions, and then simulate state in the arguments passed to the functions, and their return values.
+This is just one of the many things from functional programming, which have improved many non--functional--languages.
+
+\medskip
+Another thing which required a different frame of mind when starting in the functional paradigm, was the idea of \textit{functions as data}.
+The use and presence of \textbf{higher order functions} in FP, is in my opinion one of the most powerful concepts in functional programming.
+Coming from imperative and object--oriented languages, data consists mostly of types such as numbers, strings, and objects, but in the functional paradigm,
+functions flows like data.
+The ability to use functions as arguments and return values, is very powerful and I experienced that it yielded greater flexibility and composability,
+while developing the lisp calendar language.
+
+\medskip
+In functional programming since recursion if heavily used, the programmer must implement \textbf{tail--recursive} functions if he does not want to risk the stack growing out of control.
+Fortunately the syntax of Scheme makes it easy to identify tail--recursion.
+However the immense difference in the semantics between regular recursive and tail--recursive functions, is not adequately reflected in the syntax, in my opinion.
+
+\section{Pros and Cons of the Functional Paradigm}
+A general con of languages which are defined as ``pure'' functional languages,
+is that modelling data can be quite cumbersome, and the complexity of real world domains
+can be difficult to translate into a problem which can be solved in the functional paradigm.
+
+That being said, functional languages encourages the programmer to take a more ``mathematical'' approach in my opinion, which sometimes is easier to resonate about after the fact.
+By this I mean, that programs written in the functional paradigm, can be more easily understood, provided you can understand the syntax of the given language.
+
+\subsection{Statelessness}
+As previously discussed the \textbf{stateless} nature of FP, can be both a pro and con.
+For programmers thinking in an ``imperative'' way, it can be hard to adapt to programming without state,
+however if one can program without relying on state, even imperative programs can benefit.
+Programs without \textbf{state} are by nature easily scalable, testable and can be replaced by another piece of code,
+as long as the interface, i.e. way of input / output of the piece of code, is the same.
+
+The scalability of stateless programming also makes the functional paradigm ideal for multithreading and/or multiprocessing.
+
+\subsection{Functions as Data --- Higher Order Functions}
+I previously touched upon the use of higher order functions, which is a fundamental component in the functional paradigm.
+
+I found that in developing the Lisp calendar language, creating higher order functions, allowed me to do powerful things;
+such as only applying a function if the input was valid (as I did with \texttt{with-calendar} and \texttt{with-appointment}).
+Moreover the ability to map a function to a list is very powerful, and as I progressed in the mini project, I used it more and more.
+
+Higher order functions enables the composability of functions, but the programmer must be cautious!
+When using higher order functions it is extremely important to use pure functions, because functions which might be stateful or set global state, will have unforeseen side--effects.
+
+\medskip
+Taking everything into consideration, the composability in functional programming, makes it extremely powerful.
+I found that with relatively few functions I could solve, what seemed to be complex problems, by simply composing smaller building blocks.
+
+\section{Dynamic versus Static Typing}
+I am of the opinion that as with paradigms there is also a right tool for the job,
+when it comes to typing.
+
+Dynamic typing makes programming significantly more easy at first and prototyping systems benefits from it --- at least in my experience.
+However with static typing comes great benefits such as the possibility for better tooling (e.g.~Intellisense).
+Moreover large systems and projects, especially when multiples people are working on them, can suffer with dynamic typing, since you loose the type security.
+Also, with static types a compiler can do some clever analysis of the code, which can then be used to optimize and catch errors.
+
+While it may seem like I generally prefer static typing this is not the case.
+I believe that the benefits provided with dynamic typing outshine the cons.
+The flexibility and turn--around--time of code is unmatched by statically typed languages.
